@@ -1,0 +1,56 @@
+<?php
+
+namespace Lendable\Interview\Interpolation\Repository;
+
+use Lendable\Interview\Interpolation\Model\Fee;
+
+class FeeRepository implements FeeRepositoryInterface {
+
+    /**
+     * @var array
+     */
+    protected $feeList = array();
+
+    /**
+     * Set data source.
+     */
+    public function __construct(array $dataSource) {
+        $this->feeList = $dataSource;
+    }
+
+    /**
+     * Find the closest range fee against application loan.
+     * @param float $loan
+     * @param int $term
+     * @param string $currencyShort
+     * @param bool $greaterThan
+     * @return Fee|null
+     */
+    public function find(float $loan, int $term = 12, string $currencyShort = 'GBP', $greaterThan = true): Fee {
+
+        $compare = function($value1, $value2, $greaterThan) {
+            return ($greaterThan) ? $value1 > $value2 : $value1 < $value2;
+        };
+
+        if (isset($this->feeList[$currencyShort][$term])) {
+            $result = null;
+            foreach ($this->feeList[$currencyShort][$term] as $feeRecord) {
+                if ($compare($feeRecord['loan'], $loan, $greaterThan)) {
+                    if (isset($result)) {
+                        if ($compare($result, $feeRecord, $greaterThan)) {
+                            $result = $feeRecord;
+                        }
+                    } else {
+                        $result = $feeRecord;
+                    }
+                }
+            }
+            if (!empty($result)) {
+                return new Fee($result['fee'], $result['loan']);
+            }
+        }
+
+        return 0.00;
+    }
+
+}
